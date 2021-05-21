@@ -892,7 +892,7 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
     uint public constant REWARD_ROUND = 5;
     uint public constant INIT_REWARD = 9216 * 3 * 365 * 1e18;
     uint public constant TOTAL_REWARD = 1950 * 1e4 * 1e18;
-    uint public constant MAX_REWARD_PER_ORDER = 20 * 60;// 30 days;
+    uint public constant MAX_REWARD_PER_ORDER = 30 days;
     address public constant BURN_ADDRESS = address(0x0000000000000000000000000000000000000001);
 
     // struct
