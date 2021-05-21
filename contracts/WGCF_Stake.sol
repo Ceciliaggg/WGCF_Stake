@@ -1045,14 +1045,14 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
         for (uint round = 0; round < currentRound; round ++) {
             if (round + 1 >= currentRound) {
                 uint remainingTime = periodFinish.sub(block.timestamp);
-                output = output.add(remainingTime.mul(rewardRate));
+                output = output.add(initReward.sub(remainingTime.mul(rewardRate)));
                 continue;
             }
 
             output = output.add(INIT_REWARD.div(2**round));
         }
 
-        return output;
+        return TOTAL_REWARD.sub(output);
     }
 
     function rewardsPerT() public view returns (uint) {
