@@ -1021,7 +1021,7 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
     function stakeOrder(address account) public view returns (uint amount, uint expireAt) {
         StakeOrder memory order = _stakeOrder[account];
         amount = order.amount;
-        expireAt = order.createAt.add(MAX_REWARD_PER_ORDER);
+        expireAt = order.createAt == 0 ? 0 : order.createAt.add(MAX_REWARD_PER_ORDER);
     }
 
     function totalHash() public view returns (uint) {
@@ -1158,6 +1158,10 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
             UserInfo storage ancestor = _userInfo[currentUser];
             ancestor.umbStakedAmounts[levels[index]] = ancestor.umbStakedAmounts[levels[index]].add(amount);
             if (availableAmount(currentUser) >= condition[index]) {
+                rewards[currentUser] = earned(currentUser);
+                userRewardPerTokenPaid[currentUser] = rewardPerTokenStored;
+                _stakeOrder[currentUser].lastUpdateTime = Math.min(lastUpdateTime, _stakeOrder[currentUser].createAt.add(MAX_REWARD_PER_ORDER));
+
                 _totalPromoted = _totalPromoted.add(promoteAmount);
                 ancestor.promotedAmount = ancestor.promotedAmount.add(promoteAmount);
                 ancestor.umbStakedReward[msg.sender] = promoteAmount;
@@ -1194,6 +1198,10 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
             UserInfo storage ancestor = _userInfo[currentUser];
             ancestor.umbStakedAmounts[levels[index]] = ancestor.umbStakedAmounts[levels[index]].sub(order.amount);
             if (ancestor.umbStakedReward[msg.sender] > 0) {
+                rewards[currentUser] = earned(currentUser);
+                userRewardPerTokenPaid[currentUser] = rewardPerTokenStored;
+                _stakeOrder[currentUser].lastUpdateTime = Math.min(lastUpdateTime, _stakeOrder[currentUser].createAt.add(MAX_REWARD_PER_ORDER));
+
                 _totalPromoted = _totalPromoted.sub(promoteAmount);
                 ancestor.promotedAmount = ancestor.promotedAmount.sub(promoteAmount);
                 ancestor.umbStakedReward[msg.sender] = 0;
