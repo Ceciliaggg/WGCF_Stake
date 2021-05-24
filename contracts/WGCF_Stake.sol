@@ -1140,14 +1140,6 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
         if (_userInfo[msg.sender].father == address(0))
             _userInfo[msg.sender].father = father;
 
-        _totalStaked = _totalStaked.add(amount);
-
-        // update order
-        StakeOrder storage order = _stakeOrder[msg.sender];
-        order.createAt = block.timestamp;
-        order.amount = amount;
-        order.lastUpdateTime = block.timestamp;
-
         // distribution to ancestors
         uint promoteAmount = amount.div(10);
         address currentUser = _userInfo[msg.sender].father;
@@ -1168,6 +1160,13 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
             }
             currentUser = ancestor.father;
         }
+        
+        // update order
+        _totalStaked = _totalStaked.add(amount);
+        StakeOrder storage order = _stakeOrder[msg.sender];
+        order.createAt = block.timestamp;
+        order.amount = amount;
+        order.lastUpdateTime = block.timestamp;
 
         // transfer token
         TransferHelper.safeTransferFrom(address(this), msg.sender, address(this), amount);
@@ -1184,10 +1183,6 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
     {
         StakeOrder memory order = _stakeOrder[msg.sender];
         require(order.amount > 0, "WGCF: cannot withdraw 0");
-
-        // update order
-        _totalStaked = _totalStaked.sub(order.amount);
-        _stakeOrder[msg.sender].amount = 0;
 
         // distribution to ancestors
         uint promoteAmount = order.amount.div(10);
@@ -1208,6 +1203,10 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
             }
             currentUser = ancestor.father;
         }
+
+        // update order
+        _totalStaked = _totalStaked.sub(order.amount);
+        _stakeOrder[msg.sender].amount = 0;
 
         // transfer
         // safeTransfer(msg.sender, );
