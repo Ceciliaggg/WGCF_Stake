@@ -1146,7 +1146,7 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
         uint[15] memory levels = umbLevel();
         uint[15] memory condition = testCondition();
         for (uint index = 0; index < levels.length; index ++) {
-            if (currentUser == address(0)) break;
+            if (currentUser == BURN_ADDRESS) break;
             UserInfo storage ancestor = _userInfo[currentUser];
             ancestor.umbStakedAmounts[levels[index]] = ancestor.umbStakedAmounts[levels[index]].add(amount);
             if (availableAmount(currentUser) >= condition[index]) {
@@ -1189,7 +1189,7 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
         address currentUser = _userInfo[msg.sender].father;
         uint[15] memory levels = umbLevel();
         for (uint index = 0; index < levels.length; index ++) {
-            if (currentUser == address(0)) break;
+            if (currentUser == BURN_ADDRESS) break;
             UserInfo storage ancestor = _userInfo[currentUser];
             ancestor.umbStakedAmounts[levels[index]] = ancestor.umbStakedAmounts[levels[index]].sub(order.amount);
             if (ancestor.umbStakedReward[msg.sender] > 0) {
