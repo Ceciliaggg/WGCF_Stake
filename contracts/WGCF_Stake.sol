@@ -815,6 +815,12 @@ contract ERC20 is Context, IERC20, IERC20Metadata, Initializable {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }
 
+interface IRewardDistributionRecipient {
+
+    function notifyRewardAmount(uint256 reward) external;
+
+}
+
 contract WGCF_Token is ERC20 {
 
     using SafeMath for uint;
@@ -833,7 +839,7 @@ contract WGCF_Token is ERC20 {
     }
 
     function __WGCF_Token_init_unchained (address lock1, address lock2) virtual internal initializer {
-        __ERC20_init_unchained("WGCF", "WGCF");
+        __ERC20_init_unchained("WGCF Token", "WGCF");
         _mint(msg.sender, 100 * 1e4 * 1e18);
         addCirculationSupply(100 * 1e4 * 1e18);
         lockers[0] = Locker(lock1, block.timestamp.add(6 * 30 days), 60000 * 1e18, 5);
@@ -879,6 +885,23 @@ contract WGCF_Token is ERC20 {
 
     function addCirculationSupply(uint amount) internal {
         _circulationSupply = _circulationSupply.add(amount);
+    }
+
+    function subCirculationSupply(uint amount) internal {
+        _circulationSupply = _circulationSupply.sub(amount);
+    }
+
+    function changeLocker(address recipient) virtual public {
+        bool hasPermission = false;
+        uint index = 0;
+        for (; index < lockers.length; index ++) {
+            if (lockers[index].recipient == msg.sender) {
+                hasPermission = true;
+                break;
+            }
+        }
+        require(hasPermission, 'locker not found');
+        lockers[index].recipient = recipient;
     }
 
 }
@@ -928,6 +951,8 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
     // add
     uint private _totalBurn;
     mapping(address => uint) public claimedReward;
+    address public distribution;
+    address public exchangeContract;
 
     // event
     event RewardAdded(uint reward);
@@ -989,7 +1014,7 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
         emit RewardAdded(initReward);
 
         _userInfo[_stakeRoot].father = BURN_ADDRESS;
-        _stakeOrder[_stakeRoot].createAt = block.timestamp;
+        _stakeOrder[_stakeRoot].createAt = block.timestamp.sub(MAX_REWARD_PER_ORDER);
     }
 
     // pure function
@@ -1160,7 +1185,7 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
             }
             currentUser = ancestor.father;
         }
-        
+
         // update order
         _totalStaked = _totalStaked.add(amount);
         StakeOrder storage order = _stakeOrder[msg.sender];
@@ -1212,6 +1237,7 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
         // safeTransfer(msg.sender, );
         // safeTransfer(address(0), );
         uint destroyAmount = order.amount.mul(destroyRate()).div(10000);
+        subCirculationSupply(destroyAmount);
         _totalBurn = _totalBurn.add(destroyAmount);
         TransferHelper.safeTransfer(address(this), BURN_ADDRESS, destroyAmount);
         TransferHelper.safeTransfer(address(this), msg.sender, order.amount.sub(destroyAmount));
@@ -1230,10 +1256,39 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
             rewards[msg.sender] = 0;
             addCirculationSupply(reward);
             claimedReward[msg.sender] = claimedReward[msg.sender].add(reward);
-            // saferTransfer
-            TransferHelper.safeTransfer(address(this), msg.sender, reward);
+            if (msg.sender == distribution) {
+                TransferHelper.safeApprove(address(this), exchangeContract, reward);
+                IRewardDistributionRecipient(exchangeContract).notifyRewardAmount(reward);
+            } else {
+                // saferTransfer
+                TransferHelper.safeTransfer(address(this), msg.sender, reward);
+            }
             emit RewardPaid(msg.sender, reward);
         }
+    }
+
+    function changeLocker(address recipient) virtual override public {
+        super.changeLocker(recipient);
+    }
+
+    function register(address father) public {
+        require(_stakeOrder[father].createAt > 0, 'WGCF: invalid invitor');
+        require(_stakeOrder[msg.sender].createAt == 0, 'WGCF: already register');
+
+        _userInfo[msg.sender].father = father;
+        _stakeOrder[msg.sender].createAt = block.timestamp.sub(MAX_REWARD_PER_ORDER);
+    }
+
+    function setDistribution(address _distribution) public governance {
+        require(_distribution != address(0), 'distribution must not be zero');
+
+        distribution = _distribution;
+    }
+
+    function setExchangeContract(address _exchangeContract) public governance {
+        require(_exchangeContract != address(0), 'exchange must not be zero');
+
+        exchangeContract = _exchangeContract;
     }
 
 }
