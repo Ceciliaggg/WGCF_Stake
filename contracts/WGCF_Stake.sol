@@ -1157,6 +1157,7 @@ contract WGCF_Stake is ReentrancyGuard, Governable, WGCF_Token {
     checkOrderExpired(msg.sender)
     checkHalve
     {
+        require(_stakeOrder[msg.sender].amount == 0, 'WFCF: please withdraw first');
         require(_stakeOrder[father].createAt > 0, "WGCF: invalid invitor" );
         require(amount > 0, "WGCF: cannot stake 0");
         require(amount % (20 * 1e18) == 0, "WGCF: not multiples of 20");
