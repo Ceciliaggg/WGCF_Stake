@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.6.0;
+pragma solidity 0.6.12;
 
 // CAUTION
 // This version of SafeMath should only be used with Solidity 0.8 or later,
@@ -680,7 +680,9 @@ contract ERC20 is Context, IERC20, IERC20Metadata, Initializable {
      * - `spender` cannot be the zero address.
      */
     function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender] + addedValue);
+        uint256 currentAllowance = _allowances[_msgSender()][spender];
+        require(uint256(-1) - addedValue >= currentAllowance, "ERC20: allowance too much");
+        _approve(_msgSender(), spender, currentAllowance + addedValue);
         return true;
     }
 
